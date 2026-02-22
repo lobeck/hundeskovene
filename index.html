@@ -3,28 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Danmarks Hundeskove – oversigt og detaljer</title>
+  <title>Danmarks Hundeskove</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <header class="header">
-    <h1>Danmarks Hundeskove</h1>
-    <p class="tagline">Oversigt over hundeskove med størrelse og faciliteter</p>
+    <nav class="lang-nav" aria-label="Sprog">
+      <button type="button" class="lang-btn active" data-lang="da" aria-pressed="true">DA</button>
+      <button type="button" class="lang-btn" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" class="lang-btn" data-lang="de" aria-pressed="false">DE</button>
+    </nav>
+    <h1 id="ui-title">Danmarks Hundeskove</h1>
+    <p class="tagline" id="ui-tagline">Oversigt over hundeskove med størrelse og faciliteter</p>
   </header>
 
   <div class="layout">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <span id="forest-count">0</span> hundeskove
+        <span id="forest-count">0</span> <span id="ui-forests-count">hundeskove</span>
       </div>
-      <ul id="forest-list" class="forest-list" aria-label="Liste over hundeskove"></ul>
+      <ul id="forest-list" class="forest-list" aria-label=""></ul>
     </aside>
 
     <main class="map-container">
-      <div id="map" class="map" aria-label="Kort over danske hundeskove"></div>
+      <div id="map" class="map" aria-label=""></div>
       <div id="detail-panel" class="detail-panel hidden" aria-live="polite">
-        <button type="button" class="detail-close" id="detail-close" aria-label="Luk detaljer">×</button>
+        <button type="button" class="detail-close" id="detail-close" aria-label="Luk">×</button>
         <div id="detail-content"></div>
       </div>
     </main>

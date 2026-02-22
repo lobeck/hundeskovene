@@ -17,7 +17,7 @@
     "name": "Odense Øst Hundeskov",
     "address": "Odense Ø, Odense Kommune",
     "size_hectares": 5,
-    "features": ["Indhegnet", "Parkering", "Toilet", "Vand", "Bænke", "Småhundeområde"],
+    "feature_keys": ["fenced", "parking", "toilet", "water", "benches", "small_dogs"],
     "description": "Ligger ved skovkanten. God blandet terræn med stier og græs."
   }
 }

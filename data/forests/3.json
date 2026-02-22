@@ -17,7 +17,7 @@
     "name": "København Syd Hundeskov",
     "address": "Valby, København Kommune",
     "size_hectares": 2.1,
-    "features": ["Indhegnet", "Parkering", "Vand", "Bænke"],
+    "feature_keys": ["fenced", "parking", "water", "benches"],
     "description": "Kompakt hundeskov tæt på byen. Åben døgnet rundt."
   }
 }

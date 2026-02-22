@@ -1,0 +1,25 @@
+{
+  "ui": {
+    "title": "Dänemarks Hundewälder",
+    "tagline": "Übersicht über Hundewälder mit Größe und Ausstattung",
+    "forests_count": "Hundewälder",
+    "size": "Größe",
+    "facilities": "Ausstattung",
+    "no_facilities": "Keine Ausstattung angegeben",
+    "close": "Details schließen",
+    "list_label": "Liste der Hundewälder",
+    "map_label": "Karte der dänischen Hundewälder",
+    "load_error": "Hundewälder konnten nicht geladen werden. Bitte prüfen, ob Daten vorhanden sind.",
+    "unit_ha": "ha",
+    "unit_sqm": "m²"
+  },
+  "feature": {
+    "fenced": "Eingezäunt",
+    "parking": "Parkplatz",
+    "toilet": "Toilette",
+    "water": "Wasser",
+    "benches": "Bänke",
+    "small_dogs": "Kleine-Hunde-Bereich",
+    "accessible": "Barrierefrei"
+  }
+}

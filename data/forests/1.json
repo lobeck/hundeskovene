@@ -17,7 +17,7 @@
     "name": "Ebeltoft Hundeskov",
     "address": "Ebeltoft, Syddjurs Kommune",
     "size_hectares": 4.2,
-    "features": ["Indhegnet", "Parkering", "Toilet", "Vand", "Bænke", "Småhundeområde"],
+    "feature_keys": ["fenced", "parking", "toilet", "water", "benches", "small_dogs"],
     "description": "Lille skov tæt på Ebeltoft centrum. God plads til leg og løb."
   }
 }

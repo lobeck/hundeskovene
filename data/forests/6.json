@@ -17,7 +17,7 @@
     "name": "Grenå Hundeskov",
     "address": "Grenå, Syddjurs Kommune",
     "size_hectares": 3.5,
-    "features": ["Indhegnet", "Parkering", "Vand", "Bænke"],
+    "feature_keys": ["fenced", "parking", "water", "benches"],
     "description": "Hundeskov tæt på kysten. Kort væk fra strand og hav."
   }
 }

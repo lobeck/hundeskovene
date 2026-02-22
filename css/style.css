@@ -28,10 +28,43 @@ body {
 }
 
 .header {
+  position: relative;
   padding: 1rem 1.5rem;
+  padding-top: 2.25rem;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow);
+}
+
+.lang-nav {
+  position: absolute;
+  top: 0.75rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.lang-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.lang-btn:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.lang-btn.active {
+  color: var(--surface);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .header h1 {

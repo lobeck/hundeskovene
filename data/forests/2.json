@@ -17,7 +17,7 @@
     "name": "Aarhus Nord Hundeskov",
     "address": "Viby, Aarhus Kommune",
     "size_hectares": 6.8,
-    "features": ["Indhegnet", "Parkering", "Vand", "Bænke", "Småhundeområde", "Handicapvenlig"],
+    "feature_keys": ["fenced", "parking", "water", "benches", "small_dogs", "accessible"],
     "description": "Stor hundeskov med både skov og åbent græsareal. Populær i weekenden."
   }
 }

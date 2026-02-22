@@ -1,0 +1,25 @@
+{
+  "ui": {
+    "title": "Denmark's Dog Forests",
+    "tagline": "Overview of dog forests with size and facilities",
+    "forests_count": "dog forests",
+    "size": "Size",
+    "facilities": "Facilities",
+    "no_facilities": "No facilities listed",
+    "close": "Close details",
+    "list_label": "List of dog forests",
+    "map_label": "Map of Danish dog forests",
+    "load_error": "Could not load dog forests. Check that data exists.",
+    "unit_ha": "ha",
+    "unit_sqm": "m²"
+  },
+  "feature": {
+    "fenced": "Fenced",
+    "parking": "Parking",
+    "toilet": "Toilet",
+    "water": "Water",
+    "benches": "Benches",
+    "small_dogs": "Small dog area",
+    "accessible": "Wheelchair accessible"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "ui": {
+    "title": "Danmarks Hundeskove",
+    "tagline": "Oversigt over hundeskove med størrelse og faciliteter",
+    "forests_count": "hundeskove",
+    "size": "Størrelse",
+    "facilities": "Faciliteter",
+    "no_facilities": "Ingen faciliteter angivet",
+    "close": "Luk detaljer",
+    "list_label": "Liste over hundeskove",
+    "map_label": "Kort over danske hundeskove",
+    "load_error": "Kunne ikke indlæse hundeskove. Tjek at data findes.",
+    "unit_ha": "ha",
+    "unit_sqm": "m²"
+  },
+  "feature": {
+    "fenced": "Indhegnet",
+    "parking": "Parkering",
+    "toilet": "Toilet",
+    "water": "Vand",
+    "benches": "Bænke",
+    "small_dogs": "Småhundeområde",
+    "accessible": "Handicapvenlig"
+  }
+}

@@ -17,11 +17,12 @@ python3 -m http.server 8000
 
 ## Filer
 
-- **index.html** – side med kort og sidebar-liste
+- **index.html** – side med kort, sidebar-liste og sprogvælger (DA / EN / DE)
 - **css/style.css** – layout og styling
-- **js/app.js** – indlæsning af data, Leaflet-kort, popups og detailpanel
+- **js/app.js** – indlæsning af data og locale, Leaflet-kort, popups, detailpanel og oversættelser
+- **locales/da.json**, **locales/en.json**, **locales/de.json** – tekster til UI og til faciliteter (kun disse oversættes; navne og beskrivelser står i data)
 - **data/hundeskove.json** – genereret, kompakt GeoJSON (ét request, hurtig indlæsning)
-- **data/forests/*.json** – én fil per hundeskov (rediger her; generer derefter `hundeskove.json` med scriptet)
+- **data/forests/*.json** – én fil per hundeskov (navn, adresse, beskrivelse på originalsprog; id, størrelse, feature_keys)
 - **scripts/build_hundeskove.py** – samler alle `data/forests/*.json` til én kompakt fil
 
 ## Byg data (efter ændringer i forests/)
@@ -38,10 +39,11 @@ Kilde-data: hver fil i **data/forests/** er en enkelt GeoJSON `Feature`. Output 
 
 - **geometry** – `Point` med `[lng, lat]` eller `Polygon`/`MultiPolygon` med koordinatringe (outline af området)
 - **properties**
-  - `name` – navn
+  - `id` – unikt id
+  - `name` – navn (originalsprog, f.eks. dansk)
   - `address` – adresse/kommune
   - `size_hectares` – areal i hektar (tal)
-  - `features` – array af faciliteter (f.eks. "Indhegnet", "Parkering", "Toilet")
-  - `description` – valgfri kort beskrivelse
+  - `feature_keys` – array af facilitetsnøgler (f.eks. `"fenced"`, `"parking"`); oversættes via `feature.<key>` i locale-filerne
+  - `description` – valgfri beskrivelse (originalsprog)
 
-Du kan erstatte eller udvide `hundeskove.json` med data fra f.eks. [opendata.dk](https://www.opendata.dk) (Syddjurs, Aarhus, København m.fl.) ved at mappe deres felter til dette format.
+Kun **UI-tekster** og **facilitetslabels** (f.eks. "Parkering" / "Parking" / "Parkplatz") oversættes i **locales/**. Navne og beskrivelser vises som i data (typisk dansk).
