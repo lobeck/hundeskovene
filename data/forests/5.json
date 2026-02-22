@@ -1,0 +1,15 @@
+{
+  "type": "Feature",
+  "geometry": {
+    "type": "Point",
+    "coordinates": [9.9167, 57.0494]
+  },
+  "properties": {
+    "id": "5",
+    "name": "Aalborg Vest Hundeskov",
+    "address": "Aalborg Vest, Aalborg Kommune",
+    "size_hectares": 8.3,
+    "features": ["Indhegnet", "Parkering", "Toilet", "Vand", "Bænke", "Småhundeområde", "Handicapvenlig"],
+    "description": "En af de største hundeskove i regionen. Skov og åbent landskab."
+  }
+}
