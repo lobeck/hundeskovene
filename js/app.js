@@ -4,8 +4,20 @@
   const DATA_URL = 'data/hundeskove.json';
 
   let map;
-  let markersLayer;
+  let forestsLayer;
   let geoData;
+
+  const forestStyle = {
+    color: '#2d6a4f',
+    weight: 2,
+    fillColor: '#40916c',
+    fillOpacity: 0.45
+  };
+
+  const forestStyleHover = {
+    weight: 3,
+    fillOpacity: 0.6
+  };
 
   function initMap() {
     map = L.map('map', {
@@ -19,7 +31,66 @@
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
 
-    markersLayer = L.layerGroup().addTo(map);
+    forestsLayer = L.layerGroup().addTo(map);
+  }
+
+  function getFeatureCenter(feature) {
+    var geom = feature.geometry;
+    if (geom.type === 'Point') {
+      return L.latLng(geom.coordinates[1], geom.coordinates[0]);
+    }
+    if (geom.type === 'Polygon' && geom.coordinates[0] && geom.coordinates[0].length) {
+      var ring = geom.coordinates[0];
+      var sumLat = 0, sumLon = 0, n = ring.length - 1;
+      for (var i = 0; i < n; i++) {
+        sumLon += ring[i][0];
+        sumLat += ring[i][1];
+      }
+      return L.latLng(sumLat / n, sumLon / n);
+    }
+    if (geom.type === 'MultiPolygon' && geom.coordinates[0] && geom.coordinates[0][0]) {
+      var r = geom.coordinates[0][0];
+      var sumLat = 0, sumLon = 0, n = r.length - 1;
+      for (var i = 0; i < n; i++) {
+        sumLon += r[i][0];
+        sumLat += r[i][1];
+      }
+      return L.latLng(sumLat / n, sumLon / n);
+    }
+    return null;
+  }
+
+  function getFeatureBounds(feature) {
+    var geom = feature.geometry;
+    if (geom.type === 'Point') {
+      var lat = geom.coordinates[1], lon = geom.coordinates[0];
+      return L.latLngBounds([lat, lon], [lat, lon]);
+    }
+    if (geom.type === 'Polygon' && geom.coordinates[0]) {
+      var lats = [], lons = [];
+      geom.coordinates[0].forEach(function (c) {
+        lons.push(c[0]);
+        lats.push(c[1]);
+      });
+      return L.latLngBounds(
+        [Math.min.apply(null, lats), Math.min.apply(null, lons)],
+        [Math.max.apply(null, lats), Math.max.apply(null, lons)]
+      );
+    }
+    if (geom.type === 'MultiPolygon') {
+      var lats = [], lons = [];
+      geom.coordinates.forEach(function (poly) {
+        (poly[0] || []).forEach(function (c) {
+          lons.push(c[0]);
+          lats.push(c[1]);
+        });
+      });
+      return L.latLngBounds(
+        [Math.min.apply(null, lats), Math.min.apply(null, lons)],
+        [Math.max.apply(null, lats), Math.max.apply(null, lons)]
+      );
+    }
+    return null;
   }
 
   function formatSize(hectares) {
@@ -110,15 +181,18 @@
   }
 
   function focusForest(index) {
-    const feature = geoData.features[index];
+    var feature = geoData.features[index];
     if (!feature) return;
 
-    const coords = feature.geometry.coordinates;
-    const lat = coords[1];
-    const lon = coords[0];
-    map.setView([lat, lon], 14);
+    var center = getFeatureCenter(feature);
+    var bounds = getFeatureBounds(feature);
+    if (bounds && bounds.isValid()) {
+      map.fitBounds(bounds.pad(0.3), { maxZoom: 15 });
+    } else if (center) {
+      map.setView(center, 14);
+    }
 
-    markersLayer.eachLayer(function (layer) {
+    forestsLayer.eachLayer(function (layer) {
       if (layer.featureIndex === index) {
         layer.openPopup();
       }
@@ -127,36 +201,58 @@
     showDetailPanel(feature.properties);
   }
 
-  function addMarkers() {
-    markersLayer.clearLayers();
-    const features = geoData.features;
+  function addForests() {
+    forestsLayer.clearLayers();
+    var features = geoData.features;
 
     features.forEach(function (feature, index) {
       feature.index = index;
-      const coords = feature.geometry.coordinates;
-      const lat = coords[1];
-      const lon = coords[0];
-      const props = feature.properties;
+      var props = feature.properties;
+      var geom = feature.geometry;
+      var layer;
 
-      const marker = L.marker([lat, lon])
-        .bindPopup(createPopupContent(props), { maxWidth: 280 })
-        .addTo(markersLayer);
-      marker.featureIndex = index;
+      if (geom.type === 'Point') {
+        layer = L.marker([geom.coordinates[1], geom.coordinates[0]]);
+      } else if (geom.type === 'Polygon' || geom.type === 'MultiPolygon') {
+        layer = L.geoJSON({ type: 'Feature', geometry: geom }, {
+          style: forestStyle
+        }).getLayers()[0];
+        if (layer) {
+          layer.on('mouseover', function (e) {
+            e.target.setStyle(forestStyleHover);
+            e.target.bringToFront();
+          });
+          layer.on('mouseout', function (e) {
+            e.target.setStyle(forestStyle);
+          });
+        }
+      }
 
-      marker.on('click', function () {
-        showDetailPanel(props);
-        document.querySelectorAll('#forest-list button').forEach(function (b) {
-          b.setAttribute('aria-pressed', b.getAttribute('data-index') === String(index) ? 'true' : 'false');
+      if (layer) {
+        layer.featureIndex = index;
+        layer.bindPopup(createPopupContent(props), { maxWidth: 280 });
+        layer.on('click', function () {
+          showDetailPanel(props);
+          document.querySelectorAll('#forest-list button').forEach(function (b) {
+            b.setAttribute('aria-pressed', b.getAttribute('data-index') === String(index) ? 'true' : 'false');
+          });
         });
-      });
+        forestsLayer.addLayer(layer);
+      }
     });
 
     if (features.length > 1) {
-      const group = L.featureGroup(markersLayer.getLayers());
-      map.fitBounds(group.getBounds().pad(0.15));
+      var allBounds = L.latLngBounds();
+      features.forEach(function (f) {
+        var b = getFeatureBounds(f);
+        if (b && b.isValid()) allBounds.extend(b);
+      });
+      if (allBounds.isValid()) map.fitBounds(allBounds.pad(0.15));
     } else if (features.length === 1) {
-      const c = features[0].geometry.coordinates;
-      map.setView([c[1], c[0]], 12);
+      var c = getFeatureCenter(features[0]);
+      var b = getFeatureBounds(features[0]);
+      if (b && b.isValid()) map.fitBounds(b.pad(0.2));
+      else if (c) map.setView(c, 12);
     }
 
     renderForestList(features);
@@ -173,7 +269,7 @@
           throw new Error('Ugyldig dataformat');
         }
         geoData = data;
-        addMarkers();
+        addForests();
       })
       .catch(function (err) {
         console.error(err);

@@ -36,7 +36,7 @@ Kør fra projektmappen. Scriptet læser alle `.json` i `data/forests/`, bygger e
 
 Kilde-data: hver fil i **data/forests/** er en enkelt GeoJSON `Feature`. Output **data/hundeskove.json** er en GeoJSON `FeatureCollection`. Hver `Feature` har:
 
-- **geometry** – `Point` med `[lng, lat]`
+- **geometry** – `Point` med `[lng, lat]` eller `Polygon`/`MultiPolygon` med koordinatringe (outline af området)
 - **properties**
   - `name` – navn
   - `address` – adresse/kommune
