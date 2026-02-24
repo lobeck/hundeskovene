@@ -288,7 +288,20 @@
       var layer;
 
       if (geom.type === 'Point') {
-        layer = L.marker([geom.coordinates[1], geom.coordinates[0]]);
+        layer = L.circleMarker([geom.coordinates[1], geom.coordinates[0]], {
+          radius: 6,
+          color: forestStyle.color,
+          weight: forestStyle.weight,
+          fillColor: forestStyle.fillColor,
+          fillOpacity: forestStyle.fillOpacity
+        });
+        layer.on('mouseover', function (e) {
+          e.target.setStyle({ weight: forestStyleHover.weight, fillOpacity: forestStyleHover.fillOpacity });
+          e.target.bringToFront();
+        });
+        layer.on('mouseout', function (e) {
+          e.target.setStyle({ weight: forestStyle.weight, fillOpacity: forestStyle.fillOpacity });
+        });
       } else if (geom.type === 'Polygon' || geom.type === 'MultiPolygon') {
         layer = L.geoJSON({ type: 'Feature', geometry: geom }, {
           style: forestStyle
