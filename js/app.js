@@ -92,6 +92,15 @@
     fillOpacity: 0.6
   };
 
+  function getPointRadius() {
+    if (!map) return 6;
+    var z = map.getZoom();
+    if (z <= 8) return 3;
+    if (z <= 11) return 4;
+    if (z <= 13) return 5;
+    return 6;
+  }
+
   function initMap() {
     map = L.map('map', {
       center: [56.0, 10.5],
@@ -105,6 +114,13 @@
     }).addTo(map);
 
     forestsLayer = L.layerGroup().addTo(map);
+
+    map.on('zoomend', function () {
+      var r = getPointRadius();
+      forestsLayer.eachLayer(function (layer) {
+        if (layer.setRadius) layer.setRadius(r);
+      });
+    });
   }
 
   function getFeatureCenter(feature) {
@@ -289,7 +305,7 @@
 
       if (geom.type === 'Point') {
         layer = L.circleMarker([geom.coordinates[1], geom.coordinates[0]], {
-          radius: 6,
+          radius: getPointRadius(),
           color: forestStyle.color,
           weight: forestStyle.weight,
           fillColor: forestStyle.fillColor,
