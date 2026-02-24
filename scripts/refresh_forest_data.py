@@ -2,7 +2,7 @@
 """
 Refresh forest data from OpenStreetMap (Overpass API) for Denmark.
 Merges optional data/forest_overrides.json and data/forest_updates.csv,
-writes data/forests/*.json, then runs build_hundeskove.py.
+writes data/forests/*.json, then builds data/hundeskove.json (via build_hundeskove).
 
 Run from project root: python3 scripts/refresh_forest_data.py
 """
@@ -11,7 +11,6 @@ import argparse
 import csv
 import json
 import math
-import subprocess
 import sys
 import time
 import urllib.error
@@ -20,14 +19,19 @@ from pathlib import Path
 from typing import Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+from build_hundeskove import build_hundeskove
+
 FORESTS_DIR = PROJECT_ROOT / "data" / "forests"
 OVERRIDES_FILE = PROJECT_ROOT / "data" / "forest_overrides.json"
 CSV_FILE = PROJECT_ROOT / "data" / "forest_updates.csv"
 GEOCODE_CACHE_FILE = PROJECT_ROOT / "data" / "geocode_cache.json"
-BUILD_SCRIPT = PROJECT_ROOT / "scripts" / "build_hundeskove.py"
 
-# Denmark bbox (south, west, north, east)
-DENMARK_BBOX = (54.5, 8.0, 57.8, 15.2)
+# Denmark: query by country boundary (area) instead of bbox
+# ISO 3166-1 alpha-2 country code for Denmark
+DENMARK_ISO = "DK"
 
 # Overpass API endpoint
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
@@ -35,6 +39,10 @@ OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 # Nominatim (OSM) reverse geocoding - requires 1 request/sec, set User-Agent
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse"
 NOMINATIM_USER_AGENT = "hundeskov-map/1.0 (refresh forest data)"
+
+# Retries on 429 Too Many Requests and 5xx server errors
+MAX_RETRIES = 3
+RETRY_BASE_SECONDS = 60
 
 # App feature_keys that have locale translations (from locales/da.json)
 VALID_FEATURE_KEYS = frozenset(
@@ -53,13 +61,14 @@ OSM_TAG_TO_FEATURE = {
 }
 
 
-def overpass_query(bbox: tuple) -> str:
-    south, west, north, east = bbox
-    return f"""[out:json][timeout:90];
+def overpass_query() -> str:
+    """Query for dog parks inside Denmark (country boundary, not bbox)."""
+    return f"""[out:json][timeout:120];
+area["ISO3166-1"="{DENMARK_ISO}"]->.dk;
 (
-  node["leisure"="dog_park"]({south},{west},{north},{east});
-  way["leisure"="dog_park"]({south},{west},{north},{east});
-  relation["leisure"="dog_park"]({south},{west},{north},{east});
+  node(area.dk)["leisure"="dog_park"];
+  way(area.dk)["leisure"="dog_park"];
+  relation(area.dk)["leisure"="dog_park"];
 );
 out body geom;
 """
@@ -76,6 +85,57 @@ out body geom;
 """
 
 
+def _is_too_many_requests(err: BaseException) -> bool:
+    """True if the error indicates HTTP 429 Too Many Requests."""
+    if isinstance(err, urllib.error.HTTPError):
+        return err.code == 429
+    if isinstance(err, urllib.error.URLError) and getattr(err, "reason", None):
+        msg = str(err.reason).lower()
+        return "429" in msg or "too many requests" in msg
+    return False
+
+
+def _is_server_error(err: BaseException) -> bool:
+    """True if the error indicates an HTTP 5xx server error."""
+    if isinstance(err, urllib.error.HTTPError):
+        return 500 <= err.code < 600
+    return False
+
+
+def _should_retry_request(err: BaseException) -> bool:
+    """True if the request should be retried (429, 5xx, or rate-limit URLError)."""
+    if isinstance(err, urllib.error.HTTPError):
+        return err.code == 429 or (500 <= err.code < 600)
+    if isinstance(err, urllib.error.URLError) and getattr(err, "reason", None):
+        msg = str(err.reason).lower()
+        return "429" in msg or "too many requests" in msg
+    return False
+
+
+def _retry_after_seconds(err: urllib.error.HTTPError, attempt: int) -> int:
+    """Return delay in seconds: use Retry-After header if present and valid (429), else exponential backoff."""
+    if err.code == 429:
+        ra = err.headers.get("Retry-After")
+        if ra is not None:
+            try:
+                return max(1, int(ra))
+            except ValueError:
+                pass
+    return RETRY_BASE_SECONDS * (2**attempt)
+
+
+def _retry_message(err: BaseException, service: str) -> str:
+    """Human-readable reason for retry."""
+    if isinstance(err, urllib.error.HTTPError):
+        if err.code == 429:
+            return f"{service} 429 Too Many Requests"
+        if 500 <= err.code < 600:
+            return f"{service} {err.code} server error"
+    if isinstance(err, urllib.error.URLError):
+        return f"{service} rate limit / connection error"
+    return f"{service} error"
+
+
 def fetch_overpass(query: str, timeout: int = 120) -> dict:
     body = urllib.parse.urlencode({"data": query}).encode("utf-8")
     req = urllib.request.Request(
@@ -84,8 +144,30 @@ def fetch_overpass(query: str, timeout: int = 120) -> dict:
         method="POST",
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    last_err = None
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            last_err = e
+            if _should_retry_request(e) and attempt < MAX_RETRIES:
+                delay = _retry_after_seconds(e, attempt)
+                print(f"  {_retry_message(e, 'Overpass')}, retrying in {delay}s (attempt {attempt + 1}/{MAX_RETRIES + 1})...", flush=True)
+                time.sleep(delay)
+            else:
+                raise
+        except urllib.error.URLError as e:
+            last_err = e
+            if _should_retry_request(e) and attempt < MAX_RETRIES:
+                delay = RETRY_BASE_SECONDS * (2**attempt)
+                print(f"  {_retry_message(e, 'Overpass')}, retrying in {delay}s (attempt {attempt + 1}/{MAX_RETRIES + 1})...", flush=True)
+                time.sleep(delay)
+            else:
+                raise
+    if last_err:
+        raise last_err
+    raise RuntimeError("fetch_overpass: unexpected")
 
 
 def osm_element_sort_key(el: dict) -> tuple:
@@ -131,6 +213,7 @@ def relation_has_usable_geometry(el: dict) -> bool:
 def relation_to_geometry(el: dict, ways_by_id: Optional[dict] = None) -> Optional[tuple]:
     """Build Polygon or MultiPolygon from relation. Uses relation['geometry'] if present,
     otherwise builds from member ways using ways_by_id (required when geometry missing)."""
+    ways_by_id = ways_by_id or {}
     geom = el.get("geometry")
     if relation_has_usable_geometry(el):
         coords = [[p["lon"], p["lat"]] for p in geom]
@@ -140,7 +223,6 @@ def relation_to_geometry(el: dict, ways_by_id: Optional[dict] = None) -> Optiona
 
     # Build from member ways (Overpass often does not fill relation geometry)
     members = el.get("members") or []
-    ways_by_id = ways_by_id or {}
     outers = []
     inners = []
     for m in members:
@@ -416,10 +498,23 @@ def reverse_geocode(lat: float, lon: float) -> str:
         f"{NOMINATIM_URL}?{params}",
         headers={"User-Agent": NOMINATIM_USER_AGENT},
     )
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except (urllib.error.URLError, json.JSONDecodeError, KeyError):
+    last_err = None
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            break
+        except (json.JSONDecodeError, KeyError):
+            return "Danmark"
+        except (urllib.error.HTTPError, urllib.error.URLError) as e:
+            last_err = e
+            if _should_retry_request(e) and attempt < MAX_RETRIES:
+                delay = _retry_after_seconds(e, attempt) if isinstance(e, urllib.error.HTTPError) else RETRY_BASE_SECONDS * (2**attempt)
+                print(f"  {_retry_message(e, 'Nominatim')}, retrying in {delay}s (attempt {attempt + 1}/{MAX_RETRIES + 1})...", flush=True)
+                time.sleep(delay)
+            else:
+                return "Danmark"
+    else:
         return "Danmark"
     addr = data.get("address") or {}
     place = (
@@ -473,11 +568,14 @@ def main() -> None:
         help="Skip reverse geocoding; keep address as 'Danmark' when OSM has no addr tags",
     )
     args = parser.parse_args()
-    print("Fetching dog parks from OpenStreetMap (Denmark)...", flush=True)
+    print("Fetching dog parks from OpenStreetMap (Denmark, by country boundary)...", flush=True)
     print("  (main Overpass query may take 1–2 minutes)", flush=True)
-    query = overpass_query(DENMARK_BBOX)
+    query = overpass_query()
     try:
         data = fetch_overpass(query)
+    except urllib.error.HTTPError as e:
+        print(f"Overpass request failed: HTTP {e.code} {e.reason}", file=sys.stderr)
+        sys.exit(1)
     except urllib.error.URLError as e:
         print(f"Overpass request failed: {e}", file=sys.stderr)
         sys.exit(1)
@@ -516,8 +614,10 @@ def main() -> None:
                         new_members = e.get("members") or []
                         if len(new_members) > len(el.get("members") or []):
                             el["members"] = new_members
-            except (urllib.error.URLError, json.JSONDecodeError, KeyError):
-                pass
+            except urllib.error.HTTPError as err:
+                print(f"  Warning: relation {el.get('id')} geometry fetch failed: HTTP {err.code} {err.reason}", file=sys.stderr)
+            except (urllib.error.URLError, json.JSONDecodeError, KeyError) as err:
+                print(f"  Warning: relation {el.get('id')} geometry fetch failed: {type(err).__name__}: {err}", file=sys.stderr)
             if idx % 10 == 0 or idx == total:
                 print(f"  {idx}/{total} relations", flush=True)
         print("  Done.", flush=True)
@@ -558,16 +658,8 @@ def main() -> None:
     print(f"Wrote {len(features)} forests to {FORESTS_DIR}", flush=True)
 
     print("Building hundeskove.json...", flush=True)
-    result = subprocess.run(
-        [sys.executable, str(BUILD_SCRIPT)],
-        cwd=PROJECT_ROOT,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        print(result.stderr or result.stdout, file=sys.stderr)
-        sys.exit(1)
-    print(result.stdout.strip(), flush=True)
+    n = build_hundeskove()
+    print(f"Wrote {n} forests to {PROJECT_ROOT / 'data' / 'hundeskove.json'}", flush=True)
     print("Done.", flush=True)
 
 

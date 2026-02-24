@@ -38,7 +38,7 @@ python3 scripts/refresh_forest_data.py
 
 Kør fra projektmappen. Scriptet:
 
-1. Henter `leisure=dog_park` i Danmark fra Overpass API
+1. Henter `leisure=dog_park` i Danmark fra Overpass API (efter landegrænse, ikke bbox)
 2. Konverterer til appens GeoJSON-format og skriver én fil per skov i `data/forests/`
 3. Merger valgfri `data/forest_overrides.json` og valgfri `data/forest_updates.csv` (overskriver felter hvor OSM mangler data)
 4. Hvor adressen stadig er "Danmark", slår scriptet stedsnavn op via Nominatim (reverse geocoding, 1 forespørgsel/sekund)
