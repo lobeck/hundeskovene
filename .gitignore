@@ -1,1 +1,4 @@
 data/hundeskove.json
+.DS_Store
+*.pyc
+
