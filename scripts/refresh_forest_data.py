@@ -518,10 +518,10 @@ def reverse_geocode(lat: float, lon: float) -> str:
         return "Danmark"
     addr = data.get("address") or {}
     place = (
-        addr.get("municipality")
-        or addr.get("city")
+        addr.get("village")
         or addr.get("town")
-        or addr.get("village")
+        or addr.get("city")
+        or addr.get("municipality")
         or addr.get("county")
         or addr.get("state")
         or addr.get("country")
