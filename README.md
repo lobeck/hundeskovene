@@ -27,6 +27,7 @@ python3 -m http.server 8000
 - **data/geocode_cache.json** – cache af stedsnavne fra Nominatim (oprettes automatisk ved refresh med reverse geocoding)
 - **scripts/build_hundeskove.py** – samler alle `data/forests/*.json` til én kompakt fil
 - **scripts/refresh_forest_data.py** – henter hundeskove fra OpenStreetMap (Overpass), merger overrides/CSV og opdaterer `data/forests/` og `data/hundeskove.json`
+- **scripts/refresh_forest_data_local.py** – samme pipeline som ovenstående, men læser fra en lokal OSM PBF-fil (f.eks. `data/denmark-260224.osm.pbf`); afhængigheder angives inline (PEP 723), kør med `uv run scripts/refresh_forest_data_local.py`
 
 ## Opdater forest-data (refresh)
 
@@ -35,6 +36,14 @@ For at hente alle hundeskove fra OpenStreetMap og opdatere `data/forests/` og `d
 ```bash
 python3 scripts/refresh_forest_data.py
 ```
+
+**Lokal PBF:** Hvis du har en Denmark-udtræk (f.eks. `data/denmark-260224.osm.pbf`), kan du opdatere uden Overpass:
+
+```bash
+uv run scripts/refresh_forest_data_local.py
+```
+
+Evt. anden fil: `python3 scripts/refresh_forest_data_local.py --pbf sti/til/fil.osm.pbf`. Samme overrides/CSV og reverse geocoding som Overpass-scriptet.
 
 Kør fra projektmappen. Scriptet:
 
